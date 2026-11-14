@@ -7,7 +7,7 @@
 <style>
   html,body{margin:0;height:100%;background:#1b1530;font-family:system-ui,sans-serif;color:#fff;overflow:hidden}
   #wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px}
-  canvas{background:linear-gradient(#8fd3ff,#d9f1ff 70%);border-radius:14px;box-shadow:0 10px 40px #0008;max-width:96vw}
+  canvas{touch-action:none;user-select:none;background:linear-gradient(#8fd3ff,#d9f1ff 70%);border-radius:14px;box-shadow:0 10px 40px #0008;max-width:96vw}
   .hint{opacity:.75;font-size:14px}
   kbd{background:#fff2;border:1px solid #fff4;border-radius:4px;padding:1px 6px}
 </style>
@@ -15,7 +15,7 @@
 <body>
 <div id="wrap">
   <canvas id="c" width="900" height="420" tabindex="0"></canvas>
-  <div class="hint">Zıplamak için <kbd>↑</kbd> tuşuna bas</div>
+  <div class="hint">Zıplamak için <kbd>↑</kbd> tuşuna bas ya da ekrana tıkla</div>
 </div>
 <script>
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
@@ -35,12 +35,15 @@ for(let i=0;i<5;i++)clouds.push({x:Math.random()*W,y:30+Math.random()*120,s:0.6+
 function reset(){unis=[];stars=[];score=0;speed=6;spawnT=60;P.y=FLOOR();P.vy=0;P.onGround=true;state='play'}
 P.y=FLOOR();
 
-addEventListener('keydown',e=>{
-  if(e.key!=='ArrowUp')return;
-  e.preventDefault();
+function jump(){
   if(state!=='play'){reset();return}
   if(P.onGround){P.vy=JUMP;P.onGround=false}
+}
+addEventListener('keydown',e=>{
+  if(e.key!=='ArrowUp')return;
+  e.preventDefault();jump();
 });
+cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.focus();jump();});
 cv.focus();
 
 function spawn(){
@@ -157,11 +160,10 @@ function draw(){
     ctx.font='bold 44px system-ui';
     ctx.fillText(state==='start'?'🦄 Unicorn Atlama 🦄':'Oyun Bitti!',W/2,H/2-20);
     ctx.font='22px system-ui';
-    ctx.fillText(state==='start'?'Başlamak için ↑ tuşuna bas':'Skor: '+score+'  —  Tekrar için ↑',W/2,H/2+25);
+    ctx.fillText(state==='start'?'Başlamak için ↑ tuşuna bas ya da tıkla':'Skor: '+score+'  —  Tekrar için ↑ / tıkla',W/2,H/2+25);
   }
 }
 (function loop(){update();draw();requestAnimationFrame(loop)})();
-cv.addEventListener('click',()=>cv.focus());
 </script>
 </body>
 </html>
