@@ -27,19 +27,26 @@ const PH=100; // girl sprite height
 const P={x:130,y:0,r:24,vy:0,onGround:true};
 const FLOOR=()=>GROUND-PH/2+4;
 const GRAV=0.9,JUMP=-17.5;
-let bubble=0;
+let bubble=0,trVoice=null;
+function pickVoice(){
+  try{const vs=speechSynthesis.getVoices().filter(v=>/^tr/i.test(v.lang));
+    // prefer a female Turkish voice: higher base pitch sounds more child-like
+    trVoice=vs.find(v=>/yelda|emel|seda|filiz|female|kadın|google/i.test(v.name))||vs[0]||null;}catch(e){}
+}
+try{pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}catch(e){}
+function unlockSpeech(){try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}catch(e){}}
 function sayCilek(){
-  bubble=55;
   try{const ss=window.speechSynthesis;if(!ss)return;ss.cancel();
-    const u=new SpeechSynthesisUtterance('Çilek!');u.lang='tr-TR';u.pitch=1.7;u.rate=1.15;u.volume=1;
-    const v=ss.getVoices().find(v=>/^tr/i.test(v.lang));if(v)u.voice=v;ss.speak(u);}catch(e){}
+    const u=new SpeechSynthesisUtterance('çilek!');u.lang='tr-TR';
+    u.pitch=2;u.rate=1.25;u.volume=1; // max pitch + quick = child-like
+    if(trVoice)u.voice=trVoice;ss.speak(u);}catch(e){}
 }
 let unis=[],clouds=[],stars=[],score=0,best=0,speed=6,spawnT=0,state='start',t=0;
 try{best=+localStorage.getItem('uniBest')||0}catch(e){}
 
 for(let i=0;i<5;i++)clouds.push({x:Math.random()*W,y:30+Math.random()*120,s:0.6+Math.random()*0.8});
 
-function reset(){bubble=0;unis=[];stars=[];score=0;speed=6;spawnT=60;P.y=FLOOR();P.vy=0;P.onGround=true;state='play'}
+function reset(){bubble=0;unlockSpeech();unis=[];stars=[];score=0;speed=6;spawnT=60;P.y=FLOOR();P.vy=0;P.onGround=true;state='play'}
 P.y=FLOOR();
 
 function jump(){
@@ -151,16 +158,6 @@ function draw(){
   unis.forEach(drawUnicorn);
   drawPlayer();
   stars.forEach(s=>{ctx.fillStyle=`hsla(${s.h},90%,60%,${s.l/40})`;ctx.fillRect(s.x,s.y,5,5)});
-  if(bubble>0&&state==='play'){
-    const bx=P.x+38,by=P.y-PH/2-18,a=Math.min(1,bubble/12);
-    ctx.save();ctx.globalAlpha=a;ctx.font='bold 22px system-ui';
-    const tw=ctx.measureText('Çilek! 🍓').width+20;
-    ctx.fillStyle='#fff';ctx.strokeStyle='#e8466b';ctx.lineWidth=3;
-    ctx.beginPath();ctx.roundRect(bx,by-30,tw,38,14);ctx.fill();ctx.stroke();
-    ctx.beginPath();ctx.moveTo(bx+12,by+8);ctx.lineTo(bx+2,by+20);ctx.lineTo(bx+26,by+8);ctx.fill();
-    ctx.fillStyle='#e8466b';ctx.textAlign='left';ctx.fillText('Çilek! 🍓',bx+10,by-4);
-    ctx.restore();
-  }
   // HUD
   ctx.fillStyle='#2a1a3a';ctx.font='bold 26px system-ui';ctx.textAlign='left';
   ctx.fillText('Skor: '+score,20,40);ctx.font='16px system-ui';ctx.fillText('En iyi: '+best,20,64);
