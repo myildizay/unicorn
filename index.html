@@ -89,14 +89,14 @@ function drawPlayer(){
   ctx.save();ctx.translate(P.x,P.y-bob);ctx.rotate(tilt);
   // ladybug wings on her back (behind the sprite)
   const flap=P.onGround?Math.sin(t*0.25)*0.12:Math.sin(t*0.9)*0.35;
-  drawLadyWing(-14,-4,30,-0.55-flap,false);
-  drawLadyWing(-17,0,34,-0.15+flap,true);
+  drawLadyWing(-11,-10,40,0.8+flap,false);
+  drawLadyWing(-15,-5,44,0.38-flap,true);
   if(img.complete&&img.naturalWidth)ctx.drawImage(img,-pw/2,-PH/2,pw,PH);
   ctx.restore();
 }
 function drawLadyWing(x,y,L,ang,front){
   // one ladybug elytron: red half-oval with black spots, pointing back-up
-  ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI+ang);
+  ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI+ang);ctx.scale(1,-1);
   const g=ctx.createRadialGradient(L*0.45,-L*0.15,2,L*0.5,0,L*0.75);
   g.addColorStop(0,front?'#ff6b5e':'#e8483c');g.addColorStop(1,front?'#d81e1e':'#a81515');
   ctx.fillStyle=g;ctx.strokeStyle='#1a1a1a';ctx.lineWidth=2;
