@@ -27,12 +27,19 @@ const PH=100; // girl sprite height
 const P={x:130,y:0,r:24,vy:0,onGround:true};
 const FLOOR=()=>GROUND-PH/2+4;
 const GRAV=0.9,JUMP=-17.5;
+let bubble=0;
+function sayCilek(){
+  bubble=55;
+  try{const ss=window.speechSynthesis;if(!ss)return;ss.cancel();
+    const u=new SpeechSynthesisUtterance('Çilek!');u.lang='tr-TR';u.pitch=1.7;u.rate=1.15;u.volume=1;
+    const v=ss.getVoices().find(v=>/^tr/i.test(v.lang));if(v)u.voice=v;ss.speak(u);}catch(e){}
+}
 let unis=[],clouds=[],stars=[],score=0,best=0,speed=6,spawnT=0,state='start',t=0;
 try{best=+localStorage.getItem('uniBest')||0}catch(e){}
 
 for(let i=0;i<5;i++)clouds.push({x:Math.random()*W,y:30+Math.random()*120,s:0.6+Math.random()*0.8});
 
-function reset(){unis=[];stars=[];score=0;speed=6;spawnT=60;P.y=FLOOR();P.vy=0;P.onGround=true;state='play'}
+function reset(){bubble=0;unis=[];stars=[];score=0;speed=6;spawnT=60;P.y=FLOOR();P.vy=0;P.onGround=true;state='play'}
 P.y=FLOOR();
 
 function jump(){
@@ -52,10 +59,31 @@ function spawn(){
   const uh=95*s;unis.push({x:W+60,w:uh*(uniImg.naturalWidth/uniImg.naturalHeight||0.94),h:uh,s,hue:Math.random()*360,passed:false,leg:0});
 }
 
+function drawWing(x,y,size,flap,front){
+  ctx.save();ctx.translate(x,y);ctx.rotate(-0.35-flap*0.55);
+  const g=ctx.createLinearGradient(0,0,size*0.9,-size);
+  g.addColorStop(0,front?'#ffffff':'#f1e8ff');g.addColorStop(0.6,front?'#fde4f5':'#e6d6ff');g.addColorStop(1,'#cfe9ff');
+  ctx.fillStyle=g;ctx.strokeStyle='#c9a6e8';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(0,0);
+  ctx.bezierCurveTo(size*0.15,-size*0.7,size*0.6,-size*1.05,size*1.05,-size*0.95);
+  // feather scallops back down
+  const pts=[[0.95,-0.72],[0.82,-0.5],[0.62,-0.3],[0.4,-0.12]];
+  let px=size*1.05,py=-size*0.95;
+  pts.forEach(([a,b])=>{const nx=size*a,ny=size*b;ctx.quadraticCurveTo((px+nx)/2+size*0.12,(py+ny)/2+size*0.08,nx,ny);px=nx;py=ny});
+  ctx.quadraticCurveTo(size*0.2,size*0.05,0,0);
+  ctx.fill();ctx.stroke();
+  ctx.strokeStyle='#d8bff0';ctx.lineWidth=1;
+  for(let k=1;k<=3;k++){ctx.beginPath();ctx.moveTo(size*0.1,-size*0.05*k);ctx.quadraticCurveTo(size*0.4,-size*0.35*k*0.6,size*(0.55+k*0.12),-size*(0.35+k*0.15));ctx.stroke()}
+  ctx.restore();
+}
 function drawUnicorn(u){
   const bob=Math.abs(Math.sin(t*0.25+u.x*0.03))*6;
-  if(uniImg.complete&&uniImg.naturalWidth)
-    ctx.drawImage(uniImg,u.x-u.w/2,GROUND-u.h-bob+6,u.w,u.h);
+  const flap=Math.sin(t*0.35+u.x*0.02);
+  const top=GROUND-u.h-bob+6;
+  const wx=u.x+u.w*0.12,wy=top+u.h*0.5,ws=u.h*0.55;
+  drawWing(wx+u.w*0.06,wy-2,ws*0.9,flap*0.9,false); // far wing
+  if(uniImg.complete&&uniImg.naturalWidth)ctx.drawImage(uniImg,u.x-u.w/2,top,u.w,u.h);
+  drawWing(wx,wy,ws,flap,true); // near wing
 }
 
 function drawPlayer(){
@@ -85,16 +113,33 @@ function update(){
   if(P.y>=FLOOR()){P.y=FLOOR();P.vy=0;P.onGround=true}
   if(--spawnT<=0){spawn();spawnT=Math.max(45,110-speed*5)+Math.random()*60}
   unis.forEach(u=>{u.x-=speed;
-    if(!u.passed&&u.x+u.w*0.4<P.x-20){u.passed=true;score++;for(let i=0;i<10;i++)stars.push({x:P.x,y:P.y,vx:(Math.random()-.5)*6,vy:-Math.random()*6,l:40,h:Math.random()*360})}
+    if(!u.passed&&u.x+u.w*0.4<P.x-20){u.passed=true;score++;sayCilek();for(let i=0;i<10;i++)stars.push({x:P.x,y:P.y,vx:(Math.random()-.5)*6,vy:-Math.random()*6,l:40,h:Math.random()*360})}
     if(hit(u)){state='over';if(score>best){best=score;try{localStorage.setItem('uniBest',best)}catch(e){}}}
   });
   unis=unis.filter(u=>u.x>-150);
+  if(bubble>0)bubble--;
   stars.forEach(s=>{s.x+=s.vx;s.y+=s.vy;s.vy+=0.2;s.l--});stars=stars.filter(s=>s.l>0);
   speed=6+score*0.25;
 }
 
 function draw(){
   ctx.clearRect(0,0,W,H);
+  // big rainbow
+  const rc=['#ff4d6d','#ff9f1c','#ffe14d','#5ad15a','#3fa9f5','#5b5bd6','#a35bd6'];
+  ctx.save();ctx.globalAlpha=0.55;ctx.lineWidth=18;
+  rc.forEach((c,i)=>{ctx.strokeStyle=c;ctx.beginPath();ctx.arc(W*0.47,GROUND+40,330-i*18,Math.PI,0);ctx.stroke()});
+  ctx.restore();
+  // sun (top-right)
+  const sx=W-80,sy=72;
+  ctx.save();ctx.translate(sx,sy);ctx.rotate(t*0.01);
+  ctx.strokeStyle='#ffc533';ctx.lineWidth=5;ctx.lineCap='round';
+  for(let i=0;i<12;i++){ctx.rotate(Math.PI/6);ctx.beginPath();ctx.moveTo(48,0);ctx.lineTo(i%2?62:68,0);ctx.stroke()}
+  ctx.restore();
+  const sg=ctx.createRadialGradient(sx-10,sy-10,5,sx,sy,42);sg.addColorStop(0,'#fff6a8');sg.addColorStop(1,'#ffcc22');
+  ctx.fillStyle=sg;ctx.beginPath();ctx.arc(sx,sy,40,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#8a5a00';ctx.beginPath();ctx.arc(sx-13,sy-6,3.5,0,7);ctx.arc(sx+13,sy-6,3.5,0,7);ctx.fill();
+  ctx.strokeStyle='#8a5a00';ctx.lineWidth=3;ctx.beginPath();ctx.arc(sx,sy+4,14,0.2*Math.PI,0.8*Math.PI);ctx.stroke();
+  ctx.fillStyle='#ff9a9a88';ctx.beginPath();ctx.arc(sx-22,sy+6,5,0,7);ctx.arc(sx+22,sy+6,5,0,7);ctx.fill();
   // clouds
   ctx.fillStyle='#ffffffcc';
   clouds.forEach(c=>{ctx.beginPath();ctx.arc(c.x,c.y,22*c.s,0,7);ctx.arc(c.x+25*c.s,c.y-10*c.s,28*c.s,0,7);ctx.arc(c.x+52*c.s,c.y,22*c.s,0,7);ctx.fill()});
@@ -106,9 +151,19 @@ function draw(){
   unis.forEach(drawUnicorn);
   drawPlayer();
   stars.forEach(s=>{ctx.fillStyle=`hsla(${s.h},90%,60%,${s.l/40})`;ctx.fillRect(s.x,s.y,5,5)});
+  if(bubble>0&&state==='play'){
+    const bx=P.x+38,by=P.y-PH/2-18,a=Math.min(1,bubble/12);
+    ctx.save();ctx.globalAlpha=a;ctx.font='bold 22px system-ui';
+    const tw=ctx.measureText('Çilek! 🍓').width+20;
+    ctx.fillStyle='#fff';ctx.strokeStyle='#e8466b';ctx.lineWidth=3;
+    ctx.beginPath();ctx.roundRect(bx,by-30,tw,38,14);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(bx+12,by+8);ctx.lineTo(bx+2,by+20);ctx.lineTo(bx+26,by+8);ctx.fill();
+    ctx.fillStyle='#e8466b';ctx.textAlign='left';ctx.fillText('Çilek! 🍓',bx+10,by-4);
+    ctx.restore();
+  }
   // HUD
-  ctx.fillStyle='#2a1a3a';ctx.font='bold 26px system-ui';ctx.textAlign='right';
-  ctx.fillText('Skor: '+score,W-20,40);ctx.font='16px system-ui';ctx.fillText('En iyi: '+best,W-20,64);
+  ctx.fillStyle='#2a1a3a';ctx.font='bold 26px system-ui';ctx.textAlign='left';
+  ctx.fillText('Skor: '+score,20,40);ctx.font='16px system-ui';ctx.fillText('En iyi: '+best,20,64);
   ctx.textAlign='center';
   if(state!=='play'){
     ctx.fillStyle='#0007';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';
