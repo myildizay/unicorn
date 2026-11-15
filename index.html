@@ -87,7 +87,25 @@ function drawPlayer(){
   const bob=P.onGround?Math.abs(Math.sin(t*0.3))*3:0;
   const tilt=P.onGround?0:-0.12;
   ctx.save();ctx.translate(P.x,P.y-bob);ctx.rotate(tilt);
+  // ladybug wings on her back (behind the sprite)
+  const flap=P.onGround?Math.sin(t*0.25)*0.12:Math.sin(t*0.9)*0.35;
+  drawLadyWing(-14,-4,30,-0.55-flap,false);
+  drawLadyWing(-17,0,34,-0.15+flap,true);
   if(img.complete&&img.naturalWidth)ctx.drawImage(img,-pw/2,-PH/2,pw,PH);
+  ctx.restore();
+}
+function drawLadyWing(x,y,L,ang,front){
+  // one ladybug elytron: red half-oval with black spots, pointing back-up
+  ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI+ang);
+  const g=ctx.createRadialGradient(L*0.45,-L*0.15,2,L*0.5,0,L*0.75);
+  g.addColorStop(0,front?'#ff6b5e':'#e8483c');g.addColorStop(1,front?'#d81e1e':'#a81515');
+  ctx.fillStyle=g;ctx.strokeStyle='#1a1a1a';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,0);
+  ctx.bezierCurveTo(L*0.2,-L*0.62,L*0.95,-L*0.62,L,-L*0.05);
+  ctx.quadraticCurveTo(L*0.55,L*0.12,0,0);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle='#151515';
+  [[0.3,-0.25,0.09],[0.58,-0.36,0.1],[0.78,-0.15,0.08],[0.5,-0.08,0.07]].forEach(([a,b,r])=>{ctx.beginPath();ctx.arc(L*a,L*b,L*r,0,Math.PI*2);ctx.fill()});
+  ctx.fillStyle='#ffffff99';ctx.beginPath();ctx.ellipse(L*0.4,-L*0.38,L*0.12,L*0.05,-0.3,0,Math.PI*2);ctx.fill();
   ctx.restore();
 }
 
