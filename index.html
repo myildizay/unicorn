@@ -27,11 +27,11 @@ const PH=100; // girl sprite height
 const P={x:130,y:0,r:24,vy:0,onGround:true};
 const FLOOR=()=>GROUND-PH/2+4;
 const GRAV=0.9,JUMP=-17.5;
-let bubble=0,trVoice=null;
+let bubble=0,trVoice=null,tears=[],cryT=0;
 function pickVoice(){
   try{const vs=speechSynthesis.getVoices().filter(v=>/^tr/i.test(v.lang));
     // prefer a female Turkish voice: higher base pitch sounds more child-like
-    trVoice=vs.find(v=>/yelda|emel|seda|filiz|female|kadın|google/i.test(v.name))||vs[0]||null;}catch(e){}
+    trVoice=vs.find(v=>/yelda|emel|seda|filiz|female|kadın|kız/i.test(v.name))||vs.find(v=>/google/i.test(v.name))||vs[0]||null;}catch(e){}
 }
 try{pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}catch(e){}
 function unlockSpeech(){try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}catch(e){}}
@@ -46,7 +46,7 @@ try{best=+localStorage.getItem('uniBest')||0}catch(e){}
 
 for(let i=0;i<5;i++)clouds.push({x:Math.random()*W,y:30+Math.random()*120,s:0.6+Math.random()*0.8});
 
-function reset(){bubble=0;unlockSpeech();unis=[];stars=[];score=0;speed=6;spawnT=60;P.y=FLOOR();P.vy=0;P.onGround=true;state='play'}
+function reset(){bubble=0;tears=[];cryT=0;unlockSpeech();unis=[];stars=[];score=0;speed=6;spawnT=60;P.y=FLOOR();P.vy=0;P.onGround=true;state='play'}
 P.y=FLOOR();
 
 function jump(){
@@ -112,8 +112,26 @@ function hit(u){
   return hx<rx+rw&&hx+hw>rx&&hy<ry+rh&&hy+hh>ry;
 }
 
+function updateTears(){
+  if(cryT>0){cryT--;
+    if(cryT%7===0){const ex=P.x+12,ey=P.y-31;
+      tears.push({x:ex+(Math.random()*4-2),y:ey,vx:0.9+Math.random()*0.8,vy:-0.6,l:70});
+      tears.push({x:ex-2,y:ey+2,vx:0.2+Math.random()*0.4,vy:0,l:70});}}
+  tears.forEach(d=>{d.x+=d.vx;d.vy+=0.18;d.y+=d.vy;d.vx*=0.97;d.l--;if(d.y>GROUND){d.y=GROUND;d.vy=0;d.vx=0;}});
+  tears=tears.filter(d=>d.l>0);
+}
+function drawTears(){
+  tears.forEach(d=>{const a=Math.min(1,d.l/20);
+    ctx.fillStyle=`rgba(90,180,255,${a})`;ctx.strokeStyle=`rgba(255,255,255,${a*0.8})`;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(d.x,d.y-6);ctx.quadraticCurveTo(d.x+4,d.y,d.x,d.y+3);ctx.quadraticCurveTo(d.x-4,d.y,d.x,d.y-6);ctx.fill();ctx.stroke();});
+  if(cryT>0){ // wet streaks on cheeks
+    ctx.strokeStyle='rgba(120,195,255,0.7)';ctx.lineWidth=2.5;ctx.lineCap='round';
+    const ex=P.x+12,ey=P.y-31;
+    ctx.beginPath();ctx.moveTo(ex,ey);ctx.quadraticCurveTo(ex+3,ey+8,ex+2,ey+15);ctx.stroke();
+  }
+}
 function update(){
-  t++;
+  t++;updateTears();
   clouds.forEach(c=>{c.x-=c.s*(state==='play'?speed*0.15:0.5);if(c.x<-120){c.x=W+80;c.y=30+Math.random()*120}});
   if(state!=='play')return;
   P.vy+=GRAV;P.y+=P.vy;
@@ -121,7 +139,7 @@ function update(){
   if(--spawnT<=0){spawn();spawnT=Math.max(45,110-speed*5)+Math.random()*60}
   unis.forEach(u=>{u.x-=speed;
     if(!u.passed&&u.x+u.w*0.4<P.x-20){u.passed=true;score++;sayCilek();for(let i=0;i<10;i++)stars.push({x:P.x,y:P.y,vx:(Math.random()-.5)*6,vy:-Math.random()*6,l:40,h:Math.random()*360})}
-    if(hit(u)){state='over';if(score>best){best=score;try{localStorage.setItem('uniBest',best)}catch(e){}}}
+    if(hit(u)){state='over';cryT=150;try{speechSynthesis.cancel()}catch(e){}if(score>best){best=score;try{localStorage.setItem('uniBest',best)}catch(e){}}}
   });
   unis=unis.filter(u=>u.x>-150);
   if(bubble>0)bubble--;
@@ -162,8 +180,11 @@ function draw(){
   ctx.fillStyle='#2a1a3a';ctx.font='bold 26px system-ui';ctx.textAlign='left';
   ctx.fillText('Skor: '+score,20,40);ctx.font='16px system-ui';ctx.fillText('En iyi: '+best,20,64);
   ctx.textAlign='center';
+  drawTears();
   if(state!=='play'){
-    ctx.fillStyle='#0007';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';
+    ctx.fillStyle=state==='over'?'#0005':'#0007';ctx.fillRect(0,0,W,H);
+    if(state==='over'){drawPlayer();drawTears();}
+    ctx.fillStyle='#fff';
     ctx.font='bold 44px system-ui';
     ctx.fillText(state==='start'?'🦄 Unicorn Atlama 🦄':'Oyun Bitti!',W/2,H/2-20);
     ctx.font='22px system-ui';
